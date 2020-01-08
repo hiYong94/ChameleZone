@@ -1,5 +1,7 @@
 
 
 module.exports = errorHandler = (err, req, res, next) => {
-    res.status(err.status).send(err.message)
+    console.log(err.statusCode)
+    console.log(err.message)
+    next(err) // res.status(err.status).send(err.message)
 }

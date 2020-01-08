@@ -1,74 +1,45 @@
 /* ==================== START modules ==================== */
 
-const Images = require('../dao/imagesDao.js');
-const multer = require('multer');
-// const upload = multer({dest: '/uploads/'});
-// const upload = multer({dest: '../public/uploads'});
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, '../public/uploads') // cb 콜백함수를 통해 전송된 파일 저장 디렉토리 설정
-    },
-    filename: function (req, file, cb) {
-      cb(null, file.originalname) // cb 콜백함수를 통해 전송된 파일 이름 설정
-    }
-})
-
-const upload = multer({ storage: storage });
-
-
+const { ErrorHandler, handleError } = require('../costomModules/customError')
+const Images            = require('../dao/imagesDao.js')
+const isEmpty           = require('../costomModules/valueCheck')
 
 /* ==================== END modules ==================== */
 
-// var upload = function(request, response) {
-//     var deferred = Q.defer();
-//     var storage = multer.diskStorage({
-//         //서버에 저장할 폴더
-//         destination: function(request, file, cb) {
-//             cb(null, '../public/uploads');
-//         },
+exports.uploadImageFile = function(request, response, next) {
+    const files = request.files
+    isEmpty('files', files[0])
+    
+    let originalFileName, savedFileName, mimetype, fileSize
 
-//         //서버에 저장할 파일 명
-//         filename: function(request, file, cb) {
-//             file.uploadFile = {
-//                 name: request.params.filename,
-//                 ext: file.mimetype.split('/')[1]
-//             };
-//             cb(null, file.uploadFile.name + '.' + file.uploadFile.ext);
-//         }
-//     });
-//     var upload = multer({ storage: storage}).single('file');
-//     upload(request, response, function(error) {
-//         if (error) {
-//             deferred.reject();
-//         } else {
-//             deferred.resolve(request.file.uploadFile);
-//         }
-//     });
+    files.forEach((item, index, array) => {
+        originalFileName = array[index] = item.originalname;
+        savedFileName = array[index] = item.filename;
+        mimetype = array[index] = item.mimetype;
+        fileSize = array[index] = item.size;
+        console.log("file: " + index + ": " + originalFileName + " || " + savedFileName + " || " + mimetype + " || " + fileSize)
+    })
 
-//     return deferred.promist;
-// }
-
-
-exports.getImageFile = function(request, response) {
-    let fileName = request.body.fileName;
-    console.log(__filename + " fileName : " + fileName);
-
-    Images.getImageFile(fileName, function(error, images) {
-      if (error) {
-        response.send(error);
+    Images.uploadImageFile([originalFileName, savedFileName, mimetype, fileSize], function(error, images) {
+        if (error) {
+            console.log(__filename + ", Images.uploadImageFile() error status code 500 !!!")
+            next(new ErrorHandler(500, 'Images.uploadImageFile() server error !!!'))
+            return
         }
-        response.send(images);
-    });
-};
+        response.status(200).send(images)
+    })
+}
 
+exports.getImageFile = function(request, response, next) {
+    const placeNumber = request.params.placeNumber
+    isEmpty('placeNumber', placeNumber)
 
-        // upload(request, response).then(function(file) {
-        //     response.send(file);    
-        // }, function(error) {
-        //     response.send(500, error);
-        // });
-        // if (error) {
-        //     response.send(error);
-        // }
-        // response.send(images);
+    Images.getImageFile(placeNumber, function(error, images, next) {
+        if (error) {
+            console.log(__filename + ", Images.getImageFile() error status code 500 !!!")
+            next(new ErrorHandler(500, 'Images.getImageFile() server error !!!'))
+            return
+        }
+        response.status(200).send(images)
+    })
+}
